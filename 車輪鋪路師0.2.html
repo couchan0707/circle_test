@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>圓形車輪鋪路師 - 寶可夢四季交響完美版</title>
+  <style>
+    :root {
+      --bg-color: #F4F1EA;
+      --card-bg: #EAE5D9;
+      --primary-color: #7D8C71;
+      --primary-hover: #67755C;
+      --accent-color: #C27D66;
+      --accent-hover: #A6634D;
+      --text-dark: #4A443F;
+      --text-muted: #8C827A;
+      --cliff-color: #8C7A6B;
+      --bridge-color: #D9C3B0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang TC", "HeiTi TC", "Microsoft JhengHei", sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 15px 10px;
+      overflow-x: hidden;
+    }
+
+    /* 開場點擊開始遮罩 (解鎖瀏覽器 AudioContext) */
+    .start-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background-color: rgba(244, 241, 234, 0.96);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      gap: 20px;
+      transition: opacity 0.5s ease;
+    }
+
+    .start-card {
+      background: #FFF;
+      padding: 30px 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      border: 2px solid var(--primary-color);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .start-title {
+      font-size: 1.8rem;
+      color: var(--text-dark);
+      font-weight: bold;
+    }
+
+    .btn-start-game {
+      font-size: 1.3rem;
+      padding: 12px 36px;
+      background-color: var(--primary-color);
+      color: #FFF;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(125, 140, 113, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .btn-start-game:active {
+      transform: scale(0.95);
+    }
+
+    header {
+      position: relative;
+      text-align: center;
+      margin-bottom: 10px;
+      width: 100%;
+      max-width: 960px;
+    }
+
+    h1 {
+      font-size: 1.7rem;
+      color: var(--text-dark);
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .btn-music-toggle {
+      position: absolute;
+      right: 10px;
+      top: 5px;
+      background-color: var(--card-bg);
+      border: 1.5px solid var(--primary-color);
+      color: var(--text-dark);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+    }
+
+    /* 頂部地圖進度條 */
+    .progress-card {
+      background-color: var(--card-bg);
+      width: 100%;
+      max-width: 960px;
+      padding: 10px 20px;
+      border-radius: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: var(--text-dark);
+    }
+
+    .map-track {
+      position: relative;
+      width: 100%;
+      height: 26px;
+      background-color: #E2DCD0;
+      border-radius: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+    }
+
+    .map-step {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: #FFF;
+      border: 2px solid var(--text-muted);
+      z-index: 2;
+      transition: all 0.3s ease;
+    }
+
+    .map-step.active {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      transform: scale(1.3);
+    }
+
+    .map-step.finished {
+      background-color: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+
+    .car-icon-progress {
+      position: absolute;
+      top: -4px;
+      left: 10px;
+      width: 38px;
+      height: 22px;
+      transition: left 0.5s linear;
+      z-index: 3;
+    }
+
+    .castle-icon {
+      position: absolute;
+      right: 6px;
+      top: -10px;
+      font-size: 1.3rem;
+      z-index: 3;
+    }
+
+    /* 主遊戲區域舞台 */
+    .game-container {
+      position: relative;
+      background-color: #FDFBF7;
+      border: 2px solid #E2DCD0;
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+      overflow: hidden;
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .viewport-box {
+      position: relative;
+      width: 100%;
+      height: 360px;
+      overflow: hidden;
+    }
+
+    .slide-wrapper {
+      position: absolute;
+      top: 0; left: 0;
+      width: 200%;
+      height: 100%;
+      display: flex;
+      transform: translateX(0);
+    }
+
+    canvas {
+      width: 50%;
+      height: 100%;
+      display: block;
+    }
+
+    /* 控制面板 */
+    .input-panel {
+      width: 100%;
+      background-color: var(--card-bg);
+      padding: 15px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .question-card {
+      background-color: #FFF;
+      padding: 10px 22px;
+      border-radius: 12px;
+      font-size: 1.15rem;
+      font-weight: bold;
+      color: var(--text-dark);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .question-card span.highlight {
+      color: var(--accent-color);
+      font-size: 1.35rem;
+    }
+
+    .answer-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .answer-group label {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    input[type="number"] {
+      font-family: inherit;
+      font-size: 1.2rem;
+      font-weight: bold;
+      padding: 6px 14px;
+      width: 130px;
+      text-align: center;
+      border: 2px solid var(--primary-color);
+      border-radius: 10px;
+      outline: none;
+      background-color: #FFF;
+      color: var(--text-dark);
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: bold;
+      padding: 8px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+
+    .btn-submit {
+      background-color: var(--primary-color);
+      color: #FFF;
+    }
+
+    .btn-retry {
+      background-color: #D98A6C;
+      color: #FFF;
+      display: none;
+    }
+
+    .btn-next {
+      background-color: var(--accent-color);
+      color: #FFF;
+      display: none;
+    }
+
+    button:active {
+      transform: scale(0.96);
+    }
+
+    .message-banner {
+      font-size: 1rem;
+      font-weight: bold;
+      padding: 6px 16px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .message-banner.success {
+      background-color: #E2EFCB;
+      color: #4A632A;
+    }
+
+    .message-banner.error {
+      background-color: #F8D7DA;
+      color: #842029;
+    }
+
+    /* 城堡通關框 */
+    .castle-victory-card {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(253, 251, 247, 0.95);
+      border: 2px solid var(--primary-color);
+      border-radius: 16px;
+      padding: 12px 24px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      z-index: 15;
+    }
+
+    .castle-victory-title {
+      font-size: 1.3rem;
+      color: var(--accent-color);
+      font-weight: bold;
+    }
+
+    .castle-victory-sub {
+      font-size: 0.95rem;
+      color: var(--text-dark);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 開場點擊啟動遮罩 -->
+  <div class="start-overlay" id="startOverlay">
+    <div class="start-card">
+      <div class="start-title">🚗 圓形車輪鋪路師</div>
+      <div style="color: var(--text-muted); font-size: 0.95rem;">算出車輪滾動長度，開啟四季音樂冒險！</div>
+      <button class="btn-start-game" onclick="startGameWithAudio()">🎮 點擊開始遊戲</button>
+    </div>
+  </div>
+
+  <header>
+    <h1>圓形車輪鋪路師</h1>
+    <div class="subtitle">算出車輪滾動一圈的長度，鋪橋讓小越野車抵達城堡！</div>
+    <button class="btn-music-toggle" id="btnMusicToggle" onclick="toggleBGM()">🎵 背景音樂：開</button>
+  </header>
+
+  <!-- 10關冒險地圖進度條 -->
+  <div class="progress-card">
+    <div class="progress-header">
+      <span>冒險地圖進度</span>
+      <span id="levelText">第 1 / 10 關</span>
+    </div>
+    <div class="map-track" id="mapTrack">
+      <div class="car-icon-progress" id="carProgressIcon">
+        <canvas id="progressCarCanvas" width="38" height="22"></canvas>
+      </div>
+      <div class="castle-icon">🏰</div>
+    </div>
+  </div>
+
+  <div class="game-container">
+    <div class="viewport-box">
+      <div class="slide-wrapper" id="slideWrapper">
+        <canvas id="canvasCurr"></canvas>
+        <canvas id="canvasNext"></canvas>
+      </div>
+
+      <div class="castle-victory-card" id="castleVictoryCard">
+        <div class="castle-victory-title">🎉 恭喜抵達城堡！大成功！</div>
+        <div class="castle-victory-sub">你順利通過了 10 道鋪路關卡，成功登頂成為圓周率大師！</div>
+        <button class="btn-submit" onclick="restartGame()">🔄 再次挑戰 10 道關卡</button>
+      </div>
+    </div>
+
+    <div class="input-panel">
+      <div class="question-card" id="questionCard">
+        關卡載入中...
+      </div>
+
+      <div class="answer-group">
+        <label for="ansInput">算算的橋長（公分）：</label>
+        <input type="number" id="ansInput" step="0.01" placeholder="輸入數字" autocomplete="off">
+        <button class="btn-submit" id="btnSubmit" onclick="checkAnswer()">🚀 出發鋪橋！</button>
+        <button class="btn-retry" id="btnRetry" onclick="retryQuestion()">🔄 重新嘗試</button>
+        <button class="btn-next" id="btnNext" onclick="nextQuestion()">下一關 ➔</button>
+      </div>
+
+      <div class="message-banner" id="msgBanner"></div>
+    </div>
+  </div>
+
+  <script>
+    const canvasCurr = document.getElementById('canvasCurr');
+    const ctxCurr = canvasCurr.getContext('2d');
+    const canvasNext = document.getElementById('canvasNext');
+    const ctxNext = canvasNext.getContext('2d');
+    const slideWrapper = document.getElementById('slideWrapper');
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // 獨立音樂與音效 Gain 通道 (避免音效干擾背景音樂)
+    let bgmMasterGain = null;
+    let sfxMasterGain = null;
+    let engineInterval = null;
+
+    function initAudioChannels() {
+      if (!bgmMasterGain) {
+        bgmMasterGain = audioCtx.createGain();
+        bgmMasterGain.gain.setValueAtTime(0.035, audioCtx.currentTime);
+        bgmMasterGain.connect(audioCtx.destination);
+      }
+      if (!sfxMasterGain) {
+        sfxMasterGain = audioCtx.createGain();
+        sfxMasterGain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        sfxMasterGain.connect(audioCtx.destination);
+      }
+    }
+
+    let bgmEnabled = true;
+    let currentBgmSeason = null;
+    let currentBgmNodes = null;
+
+    // 寶可夢風格 30 秒不重複雙聲道長篇樂章 [聲道1主旋律, 聲道2琶音低音伴奏]
+    const bgmMelodies = {
+      summer: {
+        lead: [
+          392.00, 392.00, 440.00, 392.00, 329.63, 392.00, 440.00, 493.88, 523.25, 493.88, 440.00, 392.00,
+          329.63, 293.66, 329.63, 392.00, 440.00, 440.00, 493.88, 440.00, 392.00, 329.63, 293.66, 329.63,
+          392.00, 440.00, 493.88, 523.25, 493.88, 440.00, 392.00, 329.63, 349.23, 392.00, 440.00, 392.00,
+          329.63, 293.66, 261.63, 293.66, 329.63, 392.00, 440.00, 493.88, 440.00, 392.00, 329.63, 293.66,
+          261.63, 293.66, 329.63, 392.00, 440.00, 493.88, 523.25, 587.33, 523.25, 493.88, 440.00, 392.00,
+          329.63, 392.00, 440.00, 493.88, 523.25, 493.88, 440.00, 392.00, 329.63, 293.66, 329.63, 392.00,
+          440.00, 493.88, 523.25, 493.88, 440.00, 392.00, 329.63, 293.66, 329.63, 392.00, 440.00, 493.88,
+          523.25, 587.33, 523.25, 493.88, 440.00, 392.00, 349.23, 329.63, 293.66, 329.63, 392.00, 440.00
+        ],
+        bass: [
+          196.00, 246.94, 293.66, 246.94, 164.81, 220.00, 261.63, 220.00, 196.00, 246.94, 293.66, 246.94,
+          164.81, 220.00, 261.63, 220.00, 220.00, 261.63, 329.63, 261.63, 196.00, 246.94, 293.66, 246.94,
+          164.81, 220.00, 261.63, 220.00, 196.00, 246.94, 293.66, 246.94, 174.61, 220.00, 261.63, 220.00,
+          164.81, 220.00, 261.63, 220.00, 146.83, 196.00, 246.94, 196.00, 164.81, 220.00, 261.63, 220.00,
+          130.81, 164.81, 196.00, 164.81, 146.83, 196.00, 246.94, 196.00, 164.81, 220.00, 261.63, 220.00,
+          196.00, 246.94, 293.66, 246.94, 164.81, 220.00, 261.63, 220.00, 196.00, 246.94, 293.66, 246.94,
+          220.00, 261.63, 329.63, 261.63, 196.00, 246.94, 293.66, 246.94, 164.81, 220.00, 261.63, 220.00,
+          196.00, 246.94, 293.66, 246.94, 174.61, 220.00, 261.63, 220.00, 146.83, 196.00, 246.94, 196.00
+        ]
+      },
+      autumn: {
+        lead: [
+          349.23, 392.00, 440.00, 349.23, 440.00, 523.25, 440.00, 349.23, 392.00, 440.00, 349.23, 293.66,
+          349.23, 392.00, 349.23, 293.66, 440.00, 440.00, 349.23, 392.00, 440.00, 523.25, 440.00, 349.23,
+          329.63, 349.23, 392.00, 440.00, 392.00, 349.23, 329.63, 293.66, 349.23, 392.00, 440.00, 523.25,
+          440.00, 392.00, 349.23, 293.66, 329.63, 349.23, 392.00, 440.00, 523.25, 440.00, 392.00, 349.23,
+          293.66, 349.23, 392.00, 440.00, 392.00, 349.23, 329.63, 293.66, 349.23, 392.00, 440.00, 523.25,
+          440.00, 392.00, 349.23, 293.66, 349.23, 392.00, 440.00, 349.23, 440.00, 523.25, 440.00, 349.23,
+          392.00, 440.00, 349.23, 293.66, 349.23, 392.00, 349.23, 293.66, 440.00, 440.00, 349.23, 392.00,
+          440.00, 523.25, 440.00, 349.23, 329.63, 349.23, 392.00, 440.00, 392.00, 349.23, 329.63, 293.66
+        ],
+        bass: [
+          174.61, 220.00, 261.63, 220.00, 174.61, 220.00, 261.63, 220.00, 196.00, 246.94, 293.66, 246.94,
+          174.61, 220.00, 261.63, 220.00, 220.00, 261.63, 329.63, 261.63, 174.61, 220.00, 261.63, 220.00,
+          164.81, 220.00, 261.63, 220.00, 196.00, 246.94, 293.66, 246.94, 174.61, 220.00, 261.63, 220.00,
+          174.61, 220.00, 261.63, 220.00, 164.81, 220.00, 261.63, 220.00, 174.61, 220.00, 261.63, 220.00,
+          146.83, 196.00, 246.94, 196.00, 174.61, 220.00, 261.63, 220.00, 174.61, 220.00, 261.63, 220.00,
+          174.61, 220.00, 261.63, 220.00, 174.61, 220.00, 261.63, 220.00, 174.61, 220.00, 261.63, 220.00,
+          196.00, 246.94, 293.66, 246.94, 174.61, 220.00, 261.63, 220.00, 220.00, 261.63, 329.63, 261.63,
+          174.61, 220.00, 261.63, 220.00, 164.81, 220.00, 261.63, 220.00, 196.00, 246.94, 293.66, 246.94
+        ]
+      },
+      winter: {
+        lead: [
+          261.63, 311.13, 392.00, 311.13, 261.63, 311.13, 392.00, 440.00, 392.00, 311.13, 261.63, 220.00,
+          261.63, 311.13, 392.00, 311.13, 233.08, 261.63, 311.13, 392.00, 311.13, 261.63, 233.08, 220.00,
+          261.63, 311.13, 392.00, 440.00, 392.00, 311.13, 261.63, 220.00, 261.63, 311.13, 392.00, 311.13,
+          261.63, 311.13, 392.00, 440.00, 392.00, 311.13, 261.63, 220.00, 233.08, 261.63, 311.13, 392.00,
+          311.13, 261.63, 233.08, 220.00, 261.63, 311.13, 392.00, 440.00, 392.00, 311.13, 261.63, 220.00,
+          261.63, 311.13, 392.00, 311.13, 261.63, 311.13, 392.00, 440.00, 392.00, 311.13, 261.63, 220.00,
+          261.63, 311.13, 392.00, 311.13, 233.08, 261.63, 311.13, 392.00, 311.13, 261.63, 233.08, 220.00,
+          261.63, 311.13, 392.00, 440.00, 392.00, 311.13, 261.63, 220.00, 261.63, 311.13, 392.00, 311.13
+        ],
+        bass: [
+          130.81, 155.56, 196.00, 155.56, 130.81, 155.56, 196.00, 220.00, 196.00, 155.56, 130.81, 110.00,
+          130.81, 155.56, 196.00, 155.56, 116.54, 130.81, 155.56, 196.00, 155.56, 130.81, 116.54, 110.00,
+          130.81, 155.56, 196.00, 220.00, 196.00, 155.56, 130.81, 110.00, 130.81, 155.56, 196.00, 155.56,
+          130.81, 155.56, 196.00, 220.00, 196.00, 155.56, 130.81, 110.00, 116.54, 130.81, 155.56, 196.00,
+          155.56, 130.81, 116.54, 110.00, 130.81, 155.56, 196.00, 220.00, 196.00, 155.56, 130.81, 110.00,
+          130.81, 155.56, 196.00, 155.56, 130.81, 155.56, 196.00, 220.00, 196.00, 155.56, 130.81, 110.00,
+          130.81, 155.56, 196.00, 155.56, 116.54, 130.81, 155.56, 196.00, 155.56, 130.81, 116.54, 110.00,
+          130.81, 155.56, 196.00, 220.00, 196.00, 155.56, 130.81, 110.00, 130.81, 155.56, 196.00, 155.56
+        ]
+      },
+      spring: {
+        lead: [
+          329.63, 415.30, 493.88, 415.30, 329.63, 415.30, 493.88, 554.37, 493.88, 415.30, 329.63, 277.18,
+          329.63, 415.30, 493.88, 415.30, 370.00, 415.30, 493.88, 554.37, 493.88, 415.30, 370.00, 329.63,
+          329.63, 415.30, 493.88, 554.37, 493.88, 415.30, 329.63, 277.18, 329.63, 415.30, 493.88, 415.30,
+          329.63, 415.30, 493.88, 554.37, 493.88, 415.30, 329.63, 277.18, 370.00, 415.30, 493.88, 554.37,
+          493.88, 415.30, 370.00, 329.63, 329.63, 415.30, 493.88, 554.37, 493.88, 415.30, 329.63, 277.18,
+          329.63, 415.30, 493.88, 415.30, 329.63, 415.30, 493.88, 554.37, 493.88, 415.30, 329.63, 277.18,
+          329.63, 415.30, 493.88, 415.30, 370.00, 415.30, 493.88, 554.37, 493.88, 415.30, 370.00, 329.63,
+          329.63, 415.30, 493.88, 554.37, 493.88, 415.30, 329.63, 277.18, 329.63, 415.30, 493.88, 415.30
+        ],
+        bass: [
+          164.81, 207.65, 246.94, 207.65, 164.81, 207.65, 246.94, 277.18, 246.94, 207.65, 164.81, 138.59,
+          164.81, 207.65, 246.94, 207.65, 185.00, 207.65, 246.94, 277.18, 246.94, 207.65, 185.00, 164.81,
+          164.81, 207.65, 246.94, 277.18, 246.94, 207.65, 164.81, 138.59, 164.81, 207.65, 246.94, 207.65,
+          164.81, 207.65, 246.94, 277.18, 246.94, 207.65, 164.81, 138.59, 185.00, 207.65, 246.94, 277.18,
+          246.94, 207.65, 185.00, 164.81, 164.81, 207.65, 246.94, 277.18, 246.94, 207.65, 164.81, 138.59,
+          164.81, 207.65, 246.94, 207.65, 164.81, 207.65, 246.94, 277.18, 246.94, 207.65, 164.81, 138.59,
+          164.81, 207.65, 246.94, 207.65, 185.00, 207.65, 246.94, 277.18, 246.94, 207.65, 185.00, 164.81,
+          164.81, 207.65, 246.94, 277.18, 246.94, 207.65, 164.81, 138.59, 164.81, 207.65, 246.94, 207.65
+        ]
+      }
+    };
+
+    function startBGMForSeason(season, fadeInTime = 0.8) {
+      if (!bgmEnabled) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      initAudioChannels();
+
+      if (currentBgmSeason === season && currentBgmNodes) return; // 同季節持續無縫播放，100%不重置
+
+      bgmMasterGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      bgmMasterGain.gain.linearRampToValueAtTime(0.035, audioCtx.currentTime + fadeInTime);
+
+      const track = bgmMelodies[season] || bgmMelodies.summer;
+      let noteIdx = 0;
+
+      const intervalId = setInterval(() => {
+        if (!bgmEnabled || audioCtx.state === 'suspended') return;
+
+        // 聲道 1：主旋律 (Square 方波)
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'square';
+        osc1.frequency.setValueAtTime(track.lead[noteIdx], audioCtx.currentTime);
+        gain1.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+        osc1.connect(gain1);
+        gain1.connect(bgmMasterGain);
+        osc1.start();
+        osc1.stop(audioCtx.currentTime + 0.25);
+
+        // 聲道 2：低音伴奏 (Triangle 三角波)
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(track.bass[noteIdx], audioCtx.currentTime);
+        gain2.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.28);
+        osc2.connect(gain2);
+        gain2.connect(bgmMasterGain);
+        osc2.start();
+        osc2.stop(audioCtx.currentTime + 0.28);
+
+        noteIdx = (noteIdx + 1) % track.lead.length;
+      }, 300);
+
+      currentBgmSeason = season;
+      currentBgmNodes = { intervalId };
+    }
+
+    function fadeOutBGM(fadeOutTime = 0.8) {
+      if (!currentBgmNodes || !bgmMasterGain) return;
+      const { intervalId } = currentBgmNodes;
+      bgmMasterGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + fadeOutTime);
+      setTimeout(() => {
+        clearInterval(intervalId);
+        if (currentBgmNodes && currentBgmNodes.intervalId === intervalId) {
+          currentBgmNodes = null;
+          currentBgmSeason = null;
+        }
+      }, fadeOutTime * 1000);
+    }
+
+    function toggleBGM() {
+      bgmEnabled = !bgmEnabled;
+      const btn = document.getElementById('btnMusicToggle');
+      if (bgmEnabled) {
+        btn.innerText = '🎵 背景音樂：開';
+        startBGMForSeason(currLevelData.season || 'summer', 0.8);
+      } else {
+        btn.innerText = '🔇 背景音樂：關';
+        fadeOutBGM(0.5);
+      }
+    }
+
+    function startGameWithAudio() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      initAudioChannels();
+      const overlay = document.getElementById('startOverlay');
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        startBGMForSeason(currLevelData.season || 'summer', 0.8);
+      }, 500);
+    }
+
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      initAudioChannels();
+
+      if (type === 'roll') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(sfxMasterGain);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(420, audioCtx.currentTime + 0.8);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.8);
+      } else if (type === 'win') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(sfxMasterGain);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(392, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(493.88, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+      } else if (type === 'error') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(sfxMasterGain);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(261.63, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(220, audioCtx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+      } else if (type === 'engine_start') {
+        if (engineInterval) return;
+        engineInterval = setInterval(() => {
+          if (audioCtx.state === 'suspended') return;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(sfxMasterGain);
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.05);
+        }, 120);
+      } else if (type === 'engine_stop') {
+        if (engineInterval) {
+          clearInterval(engineInterval);
+          engineInterval = null;
+        }
+      }
+    }
+
+    const PIXEL_PER_CM = 11;
+    const CAR_SPEED = 3.8;
+
+    const TOTAL_LEVELS = 10;
+    let currentLevel = 1;
+    let diameterPool = [];
+
+    let currLevelData = { diameter: 5, targetCm: 15.7, isFinalCastle: false, season: 'summer' };
+    let nextLevelData = null;
+
+    let userAnsCm = 0;
+    let animPhase = 'IDLE'; 
+    let rollProgress = 0;
+    let carXOffset = 0;
+    let resultType = 'SUCCESS';
+
+    const colors = {
+      bg: '#FDFBF7',
+      text: '#4A443F',
+      cliff: '#8C7A6B',
+      bridge: '#C27D66',
+      wheelFill: 'rgba(212, 196, 176, 0.8)',
+      wheelStroke: '#7D8C71',
+      carBody: '#C27D66',
+      carRoof: '#D9C3B0'
+    };
+
+    const seasons = {
+      summer: { bgSky: '#FDFBF7', mountain: '#C5D1B7' },
+      autumn: { bgSky: '#FBF6ED', mountain: '#D9B382' },
+      winter: { bgSky: '#F2F4F5', mountain: '#B8C4CC' },
+      spring: { bgSky: '#FCF5F5', mountain: '#D4E0C8' }
+    };
+
+    function getSeasonByLevel(lvl, isCastle) {
+      if (isCastle || lvl === 10) return 'spring';
+      if (lvl <= 3) return 'summer';
+      if (lvl <= 6) return 'autumn';
+      return 'winter';
+    }
+
+    let envParticles = [];
+    let confettiParticles = [];
+
+    function initEnvParticles(season) {
+      envParticles = [];
+      const count = season === 'summer' ? 0 : 25;
+      const canvasW = canvasCurr.width || 480;
+      for (let i = 0; i < count; i++) {
+        envParticles.push({
+          x: Math.random() * canvasW,
+          y: Math.random() * 360,
+          size: Math.random() * 3.5 + 2,
+          speedY: Math.random() * 0.5 + 0.3,
+          speedX: Math.sin(Math.random() * Math.PI) * 0.3,
+          color: season === 'autumn' ? '#D98A6C' : (season === 'winter' ? '#FFFFFF' : '#E8B4B8')
+        });
+      }
+    }
+
+    function initConfetti() {
+      confettiParticles = [];
+      const canvasW = canvasCurr.width || 480;
+      for (let i = 0; i < 40; i++) {
+        confettiParticles.push({
+          x: Math.random() * canvasW,
+          y: Math.random() * 80 - 80,
+          r: Math.random() * 4 + 3,
+          color: ['#C27D66', '#7D8C71', '#D9C3B0', '#F2C94C'][Math.floor(Math.random() * 4)],
+          vx: Math.random() * 1.5 - 0.75,
+          vy: Math.random() * 1.2 + 1.2
+        });
+      }
+    }
+
+    function backgroundRenderLoop() {
+      if (envParticles.length > 0) {
+        for (let p of envParticles) {
+          p.y += p.speedY;
+          p.x += p.speedX;
+          if (p.y > 360) p.y = -5;
+        }
+      }
+
+      if (animPhase === 'VICTORY') {
+        for (let p of confettiParticles) {
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.y > 360) p.y = -10;
+        }
+      }
+
+      if (animPhase === 'IDLE' || animPhase === 'VICTORY') {
+        if (currLevelData.isFinalCastle) {
+          drawScene(ctxCurr, currLevelData, 0, 0, true);
+        } else {
+          drawScene(ctxCurr, currLevelData, carXOffset, rollProgress, false);
+        }
+      }
+
+      requestAnimationFrame(backgroundRenderLoop);
+    }
+
+    function initCanvas() {
+      const rect = canvasCurr.getBoundingClientRect();
+      canvasCurr.width = rect.width;
+      canvasCurr.height = rect.height;
+      canvasNext.width = rect.width;
+      canvasNext.height = rect.height;
+      drawProgressCar();
+      drawScene(ctxCurr, currLevelData, carXOffset, rollProgress, false);
+    }
+
+    window.addEventListener('resize', initCanvas);
+
+    function drawProgressCar() {
+      const pCanvas = document.getElementById('progressCarCanvas');
+      const pCtx = pCanvas.getContext('2d');
+      pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+      pCtx.save();
+      pCtx.scale(0.5, 0.5);
+      drawCuteCar(pCtx, 2, 38, false);
+      pCtx.restore();
+    }
+
+    function initPool() {
+      diameterPool = [];
+      for (let i = 0; i < 2; i++) {
+        for (let d = 2; d <= 10; d++) {
+          diameterPool.push(d);
+        }
+      }
+      diameterPool.sort(() => Math.random() - 0.5);
+    }
+
+    function getNextDiameter() {
+      if (diameterPool.length === 0) initPool();
+      return diameterPool.pop();
+    }
+
+    function initProgressMap() {
+      const track = document.getElementById('mapTrack');
+      const oldSteps = track.querySelectorAll('.map-step');
+      oldSteps.forEach(s => s.remove());
+
+      for (let i = 1; i <= TOTAL_LEVELS; i++) {
+        const step = document.createElement('div');
+        step.className = `map-step ${i === 1 ? 'active' : ''}`;
+        step.id = `mapStep${i}`;
+        track.appendChild(step);
+      }
+      updateProgressBar();
+    }
+
+    function updateProgressBar() {
+      document.getElementById('levelText').innerText = `第 ${currentLevel} / ${TOTAL_LEVELS} 關`;
+      const carIcon = document.getElementById('carProgressIcon');
+      
+      const percent = (currentLevel - 1) / (TOTAL_LEVELS - 1);
+      const trackWidth = document.getElementById('mapTrack').clientWidth - 50;
+      carIcon.style.left = `${10 + percent * trackWidth}px`;
+
+      for (let i = 1; i <= TOTAL_LEVELS; i++) {
+        const step = document.getElementById(`mapStep${i}`);
+        if (!step) continue;
+        if (i < currentLevel) {
+          step.className = 'map-step finished';
+        } else if (i === currentLevel) {
+          step.className = 'map-step active';
+        } else {
+          step.className = 'map-step';
+        }
+      }
+    }
+
+    function setupLevel() {
+      const d = getNextDiameter();
+      const seasonName = getSeasonByLevel(currentLevel, false);
+      currLevelData = {
+        diameter: d,
+        targetCm: parseFloat((d * 3.14).toFixed(2)),
+        isFinalCastle: false,
+        season: seasonName
+      };
+
+      initEnvParticles(seasonName);
+      startBGMForSeason(seasonName, 0.8);
+
+      document.getElementById('questionCard').innerHTML = `
+        本關車輪直徑為：<span class="highlight">${currLevelData.diameter} cm</span>，請用【圓周率乘法表】算出滾一圈可鋪多長的橋？
+      `;
+      document.getElementById('ansInput').value = '';
+      document.getElementById('ansInput').disabled = false;
+      document.getElementById('btnSubmit').style.display = 'inline-block';
+      document.getElementById('btnRetry').style.display = 'none';
+      document.getElementById('btnNext').style.display = 'none';
+      document.getElementById('msgBanner').style.display = 'none';
+      document.getElementById('castleVictoryCard').style.display = 'none';
+
+      animPhase = 'IDLE';
+      rollProgress = 0;
+      carXOffset = 0;
+
+      updateProgressBar();
+      drawScene(ctxCurr, currLevelData, carXOffset, rollProgress, false);
+    }
+
+    function checkAnswer() {
+      const inputVal = parseFloat(document.getElementById('ansInput').value);
+      if (isNaN(inputVal)) {
+        showBanner('請先輸入算出來的橋長數字喔！', 'error');
+        return;
+      }
+
+      userAnsCm = inputVal;
+      const diff = userAnsCm - currLevelData.targetCm;
+
+      if (Math.abs(diff) <= 0.15) {
+        resultType = 'SUCCESS';
+      } else if (diff < -0.15) {
+        resultType = 'TOO_SHORT';
+      } else {
+        resultType = 'TOO_LONG';
+      }
+
+      document.getElementById('btnSubmit').style.display = 'none';
+      document.getElementById('ansInput').disabled = true;
+
+      animPhase = 'ROLLING';
+      rollProgress = 0;
+      playSound('roll');
+      requestAnimationFrame(gameLoop);
+    }
+
+    function retryQuestion() {
+      animPhase = 'IDLE';
+      rollProgress = 0;
+      carXOffset = 0;
+      document.getElementById('btnRetry').style.display = 'none';
+      document.getElementById('btnSubmit').style.display = 'inline-block';
+      const input = document.getElementById('ansInput');
+      input.disabled = false;
+      input.value = '';
+      input.focus();
+      document.getElementById('msgBanner').style.display = 'none';
+      drawScene(ctxCurr, currLevelData, carXOffset, rollProgress, false);
+    }
+
+    function nextQuestion() {
+      document.getElementById('btnNext').style.display = 'none';
+
+      if (currentLevel >= TOTAL_LEVELS) {
+        nextLevelData = { diameter: 0, targetCm: 0, isFinalCastle: true, season: 'spring' };
+      } else {
+        const d = getNextDiameter();
+        const seasonName = getSeasonByLevel(currentLevel + 1, false);
+        nextLevelData = {
+          diameter: d,
+          targetCm: parseFloat((d * 3.14).toFixed(2)),
+          isFinalCastle: false,
+          season: seasonName
+        };
+      }
+
+      drawScene(ctxNext, nextLevelData, -150, 0, false);
+
+      // 只有跨季節時才淡出舊音樂
+      if (nextLevelData.season !== currLevelData.season) {
+        fadeOutBGM(0.8);
+      }
+
+      animPhase = 'TRANSITION_EXIT';
+      playSound('engine_start');
+      requestAnimationFrame(gameLoop);
+    }
+
+    function restartGame() {
+      currentLevel = 1;
+      initPool();
+      document.getElementById('castleVictoryCard').style.display = 'none';
+      setupLevel();
+    }
+
+    function showBanner(text, type) {
+      const banner = document.getElementById('msgBanner');
+      banner.className = `message-banner ${type}`;
+      banner.innerText = text;
+      banner.style.display = 'block';
+    }
+
+    function gameLoop() {
+      const targetBridgePx = currLevelData.targetCm * PIXEL_PER_CM;
+
+      if (animPhase === 'ROLLING') {
+        rollProgress += 0.02;
+        if (rollProgress >= 1) {
+          rollProgress = 1;
+
+          if (resultType === 'SUCCESS') {
+            animPhase = 'CAR_CROSSING';
+            playSound('engine_start');
+            playSound('win');
+          } else if (resultType === 'TOO_SHORT') {
+            animPhase = 'IDLE';
+            playSound('error');
+            showBanner(`橋鋪太短囉（鋪了 ${userAnsCm} cm）！長度不夠連接對面，掉進峽谷了！`, 'error');
+            document.getElementById('btnRetry').style.display = 'inline-block';
+          } else {
+            animPhase = 'IDLE';
+            playSound('error');
+            showBanner(`橋鋪太長囉（鋪了 ${userAnsCm} cm）！撞到對面山壁了，再算精準一點！`, 'error');
+            document.getElementById('btnRetry').style.display = 'inline-block';
+          }
+        }
+        drawScene(ctxCurr, currLevelData, carXOffset, rollProgress, false);
+      } else if (animPhase === 'CAR_CROSSING') {
+        carXOffset += CAR_SPEED;
+        const totalDist = targetBridgePx + 140;
+
+        if (carXOffset >= totalDist) {
+          carXOffset = totalDist;
+          playSound('engine_stop');
+          animPhase = 'IDLE';
+
+          if (currentLevel === TOTAL_LEVELS) {
+            showBanner(`🎉 太棒了！完美通過第 10 關！請點擊【前往城堡 🏰】進入終點！`, 'success');
+            document.getElementById('btnNext').innerText = '前往城堡 🏰';
+          } else {
+            showBanner(`🎉 太棒了！算得非常精準！鋪出了 ${userAnsCm} cm 的完美橋梁！`, 'success');
+            document.getElementById('btnNext').innerText = '下一關 ➔';
+          }
+          document.getElementById('btnNext').style.display = 'inline-block';
+        } else {
+          drawScene(ctxCurr, currLevelData, carXOffset, rollProgress, true);
+        }
+      } else if (animPhase === 'TRANSITION_EXIT') {
+        carXOffset += CAR_SPEED;
+        drawScene(ctxCurr, currLevelData, carXOffset, rollProgress, true);
+
+        if (carXOffset >= canvasCurr.width) {
+          animPhase = 'TRANSITION_SLIDE';
+          slideWrapper.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
+          slideWrapper.style.transform = 'translateX(-50%)';
+
+          setTimeout(() => {
+            if (currLevelData.isFinalCastle || currentLevel >= TOTAL_LEVELS) {
+              playSound('engine_stop');
+              playSound('win');
+              initConfetti();
+              animPhase = 'VICTORY';
+              document.getElementById('castleVictoryCard').style.display = 'flex';
+              return;
+            }
+
+            currentLevel++;
+            currLevelData = nextLevelData;
+            slideWrapper.style.transition = 'none';
+            slideWrapper.style.transform = 'translateX(0)';
+
+            animPhase = 'TRANSITION_ENTER';
+            carXOffset = -150;
+            requestAnimationFrame(gameLoop);
+          }, 800);
+          return;
+        }
+      } else if (animPhase === 'TRANSITION_ENTER') {
+        carXOffset += CAR_SPEED;
+        if (carXOffset >= 0) {
+          carXOffset = 0;
+          animPhase = 'IDLE';
+          playSound('engine_stop');
+          setupLevel();
+          return;
+        }
+        drawScene(ctxCurr, currLevelData, carXOffset, 0, false);
+      }
+
+      if (animPhase !== 'IDLE' && animPhase !== 'VICTORY') {
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function drawScene(targetCtx, levelData, carX, rollProg, isSolved) {
+      targetCtx.clearRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
+
+      const groundY = 240;
+      const currentSeason = seasons[levelData.season || 'summer'];
+
+      // 1. 遠景山丘與天色
+      targetCtx.fillStyle = currentSeason.bgSky;
+      targetCtx.fillRect(0, 0, targetCtx.canvas.width, targetCtx.canvas.height);
+
+      targetCtx.fillStyle = currentSeason.mountain;
+      targetCtx.beginPath();
+      targetCtx.arc(120, 340, 180, Math.PI, 0);
+      targetCtx.arc(480, 360, 220, Math.PI, 0);
+      targetCtx.arc(840, 340, 200, Math.PI, 0);
+      targetCtx.fill();
+
+      // 全畫面四季微粒子
+      if (envParticles.length > 0 && !levelData.isFinalCastle) {
+        for (let p of envParticles) {
+          targetCtx.fillStyle = p.color;
+          targetCtx.beginPath();
+          targetCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          targetCtx.fill();
+        }
+      }
+
+      const targetBridgePx = levelData.targetCm * PIXEL_PER_CM;
+      const leftCliffX = 180;
+      const rightCliffX = leftCliffX + targetBridgePx;
+
+      if (!levelData.isFinalCastle) {
+        drawRightBankEnvironment(targetCtx, levelData.season, groundY, rightCliffX, targetCtx.canvas.width);
+      }
+
+      // 特殊終點城堡場景
+      if (levelData.isFinalCastle) {
+        targetCtx.fillStyle = colors.cliff;
+        targetCtx.fillRect(0, groundY, targetCtx.canvas.width, targetCtx.canvas.height - groundY);
+        drawCastle(targetCtx, targetCtx.canvas.width / 2 - 35, groundY);
+        drawCuteCar(targetCtx, targetCtx.canvas.width / 2 - 120 + carX, groundY, false);
+
+        if (animPhase === 'VICTORY') {
+          for (let p of confettiParticles) {
+            targetCtx.fillStyle = p.color;
+            targetCtx.beginPath();
+            targetCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            targetCtx.fill();
+          }
+        }
+        return;
+      }
+
+      // 2. 懸崖 (貼地)
+      targetCtx.fillStyle = colors.cliff;
+      targetCtx.fillRect(0, groundY, leftCliffX, targetCtx.canvas.height - groundY);
+      targetCtx.fillRect(rightCliffX, groundY, targetCtx.canvas.width - rightCliffX, targetCtx.canvas.height - groundY);
+
+      if (levelData.season === 'winter') {
+        targetCtx.fillStyle = '#FFF';
+        targetCtx.fillRect(0, groundY, leftCliffX, 6);
+        targetCtx.fillRect(rightCliffX, groundY, targetCtx.canvas.width - rightCliffX, 6);
+      }
+
+      // 3. 峽谷問號與答案揭曉
+      targetCtx.fillStyle = '#D4C4B0';
+      targetCtx.fillRect(leftCliffX, groundY + 12, targetBridgePx, targetCtx.canvas.height - groundY - 12);
+      
+      targetCtx.fillStyle = colors.text;
+      if (isSolved) {
+        targetCtx.font = 'bold 18px sans-serif';
+        targetCtx.textAlign = 'center';
+        targetCtx.fillText(`${levelData.targetCm} cm`, leftCliffX + targetBridgePx / 2, groundY + 52);
+      } else {
+        targetCtx.font = 'bold 24px sans-serif';
+        targetCtx.textAlign = 'center';
+        targetCtx.fillText('？', leftCliffX + targetBridgePx / 2, groundY + 55);
+      }
+
+      // 4. 橋梁
+      let displayedBridgeCm = userAnsCm;
+      if (animPhase === 'ROLLING') displayedBridgeCm = userAnsCm * rollProg;
+      else if (rollProg === 0) displayedBridgeCm = 0;
+
+      const displayedBridgePx = displayedBridgeCm * PIXEL_PER_CM;
+
+      if (displayedBridgePx > 0) {
+        targetCtx.fillStyle = colors.bridge;
+        targetCtx.fillRect(leftCliffX, groundY - 8, displayedBridgePx, 10);
+
+        targetCtx.strokeStyle = '#FFF';
+        targetCtx.lineWidth = 1.5;
+        for (let x = leftCliffX; x < leftCliffX + displayedBridgePx; x += 12) {
+          targetCtx.beginPath();
+          targetCtx.moveTo(x, groundY - 8);
+          targetCtx.lineTo(x, groundY + 2);
+          targetCtx.stroke();
+        }
+      }
+
+      // 5. 車輪
+      const wheelRadiusPx = (levelData.diameter / 2) * PIXEL_PER_CM;
+      const wheelX = leftCliffX + displayedBridgePx;
+      const wheelY = groundY - 8 - wheelRadiusPx;
+      const rotationAngle = (displayedBridgePx / wheelRadiusPx);
+
+      targetCtx.save();
+      targetCtx.translate(wheelX, wheelY);
+      targetCtx.rotate(rotationAngle);
+
+      targetCtx.beginPath();
+      targetCtx.arc(0, 0, wheelRadiusPx, 0, Math.PI * 2);
+      targetCtx.fillStyle = colors.wheelFill;
+      targetCtx.fill();
+      targetCtx.strokeStyle = colors.wheelStroke;
+      targetCtx.lineWidth = 3;
+      targetCtx.stroke();
+
+      targetCtx.strokeStyle = colors.wheelStroke;
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.moveTo(-wheelRadiusPx, 0);
+      targetCtx.lineTo(wheelRadiusPx, 0);
+      targetCtx.moveTo(0, -wheelRadiusPx);
+      targetCtx.lineTo(0, wheelRadiusPx);
+      targetCtx.stroke();
+
+      targetCtx.beginPath();
+      targetCtx.arc(0, wheelRadiusPx - 2, 4, 0, Math.PI * 2);
+      targetCtx.fillStyle = colors.bridge;
+      targetCtx.fill();
+      targetCtx.restore();
+
+      // 6. 車子與旗幟 (車子貼地計算)
+      const isCarOnBridge = (leftCliffX - 110 + carX >= leftCliffX - 40) && (leftCliffX - 110 + carX <= rightCliffX);
+      const carPosY = isCarOnBridge ? groundY - 8 : groundY;
+
+      drawCuteCar(targetCtx, leftCliffX - 110 + carX, carPosY, true);
+      drawFlag(targetCtx, rightCliffX + 40, groundY);
+    }
+
+    function drawRightBankEnvironment(targetCtx, season, groundY, rightCliffX, canvasW) {
+      const bankWidth = Math.max(120, canvasW - rightCliffX);
+      const zoneA = rightCliffX + bankWidth * 0.25;
+      const zoneB = rightCliffX + bankWidth * 0.65;
+
+      targetCtx.save();
+
+      if (season === 'summer') {
+        drawHouse(targetCtx, zoneB, groundY, '#C27D66', '#FFF', false);
+        drawPalmTree(targetCtx, zoneA, groundY);
+      } else if (season === 'autumn') {
+        drawHouse(targetCtx, zoneB, groundY, '#D9B382', '#EAE5D9', false);
+        drawAutumnTree(targetCtx, zoneA, groundY);
+      } else if (season === 'winter') {
+        drawHouse(targetCtx, zoneB, groundY, '#8C7A6B', '#D9C3B0', true);
+        drawWinterTree(targetCtx, zoneA, groundY);
+      } else {
+        drawHouse(targetCtx, zoneB, groundY, '#E8B4B8', '#FFF', false);
+        drawSpringTree(targetCtx, zoneA, groundY);
+      }
+
+      targetCtx.restore();
+    }
+
+    function drawHouse(targetCtx, x, groundY, roofColor, wallColor, isSnowy) {
+      const houseW = 40;
+      const houseH = 30;
+      const wallY = groundY - houseH;
+
+      targetCtx.fillStyle = wallColor;
+      targetCtx.fillRect(x, wallY, houseW, houseH);
+
+      targetCtx.fillStyle = isSnowy ? '#FFF' : roofColor;
+      targetCtx.beginPath();
+      targetCtx.moveTo(x - 5, wallY);
+      targetCtx.lineTo(x + houseW / 2, wallY - 18);
+      targetCtx.lineTo(x + houseW + 5, wallY);
+      targetCtx.fill();
+    }
+
+    function drawPalmTree(targetCtx, x, groundY) {
+      targetCtx.fillStyle = '#8C7A6B';
+      targetCtx.fillRect(x + 12, groundY - 40, 6, 40);
+
+      targetCtx.fillStyle = '#7D8C71';
+      for (let angle of [-0.5, -0.2, 0.2, 0.5]) {
+        targetCtx.beginPath();
+        targetCtx.arc(x + 15 + angle * 18, groundY - 40, 12, 0, Math.PI * 2);
+        targetCtx.fill();
+      }
+    }
+
+    function drawAutumnTree(targetCtx, x, groundY) {
+      targetCtx.fillStyle = '#8C7A6B';
+      targetCtx.fillRect(x + 12, groundY - 25, 6, 25);
+
+      targetCtx.fillStyle = '#D98A6C';
+      targetCtx.beginPath();
+      targetCtx.arc(x + 15, groundY - 38, 20, 0, Math.PI * 2);
+      targetCtx.fill();
+    }
+
+    function drawWinterTree(targetCtx, x, groundY) {
+      targetCtx.strokeStyle = '#4A443F';
+      targetCtx.lineWidth = 3;
+      targetCtx.beginPath();
+      targetCtx.moveTo(x + 10, groundY);
+      targetCtx.lineTo(x + 10, groundY - 35);
+      targetCtx.lineTo(x, groundY - 48);
+      targetCtx.moveTo(x + 10, groundY - 20);
+      targetCtx.lineTo(x + 20, groundY - 32);
+      targetCtx.stroke();
+    }
+
+    function drawSpringTree(targetCtx, x, groundY) {
+      targetCtx.fillStyle = '#8C7A6B';
+      targetCtx.fillRect(x + 12, groundY - 25, 6, 25);
+
+      targetCtx.fillStyle = '#E8B4B8';
+      targetCtx.beginPath();
+      targetCtx.arc(x + 15, groundY - 38, 20, 0, Math.PI * 2);
+      targetCtx.fill();
+    }
+
+    function drawCuteCar(targetCtx, x, baseY, isRelative) {
+      targetCtx.save();
+      targetCtx.translate(x, baseY);
+
+      targetCtx.fillStyle = colors.carBody;
+      targetCtx.beginPath();
+      targetCtx.arc(8, -11, 6, Math.PI * 0.5, Math.PI * 1.5);
+      targetCtx.rect(8, -17, 48, 12);
+      targetCtx.arc(56, -11, 6, Math.PI * 1.5, Math.PI * 0.5);
+      targetCtx.fill();
+
+      targetCtx.fillStyle = colors.carRoof;
+      targetCtx.beginPath();
+      targetCtx.rect(14, -28, 34, 12);
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#FFF';
+      targetCtx.beginPath();
+      targetCtx.rect(32, -26, 12, 8);
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#F2C94C';
+      targetCtx.beginPath();
+      targetCtx.arc(61, -11, 3.5, 0, Math.PI * 2);
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#4A443F';
+      targetCtx.beginPath();
+      targetCtx.arc(16, -6, 6, 0, Math.PI * 2);
+      targetCtx.arc(48, -6, 6, 0, Math.PI * 2);
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#E2DCD0';
+      targetCtx.beginPath();
+      targetCtx.arc(16, -6, 3, 0, Math.PI * 2);
+      targetCtx.arc(48, -6, 3, 0, Math.PI * 2);
+      targetCtx.fill();
+
+      targetCtx.restore();
+    }
+
+    function drawFlag(targetCtx, x, y) {
+      targetCtx.strokeStyle = colors.wheelStroke;
+      targetCtx.lineWidth = 3;
+      targetCtx.beginPath();
+      targetCtx.moveTo(x, y);
+      targetCtx.lineTo(x, y - 55);
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = colors.bridge;
+      targetCtx.beginPath();
+      targetCtx.moveTo(x, y - 55);
+      targetCtx.lineTo(x + 30, y - 42);
+      targetCtx.lineTo(x, y - 30);
+      targetCtx.fill();
+    }
+
+    function drawCastle(targetCtx, x, y) {
+      targetCtx.fillStyle = '#8C7A6B';
+      targetCtx.fillRect(x, y - 75, 70, 75);
+      
+      targetCtx.fillRect(x - 6, y - 89, 20, 14);
+      targetCtx.fillRect(x + 25, y - 89, 20, 14);
+      targetCtx.fillRect(x + 56, y - 89, 20, 14);
+
+      targetCtx.fillStyle = '#4A443F';
+      targetCtx.beginPath();
+      targetCtx.arc(x + 35, y - 22, 16, Math.PI, 0);
+      targetCtx.fillRect(x + 19, y - 22, 32, 22);
+      targetCtx.fill();
+    }
+
+    initPool();
+    initCanvas();
+    initProgressMap();
+    setupLevel();
+    backgroundRenderLoop();
+  </script>
+</body>
+</html>
